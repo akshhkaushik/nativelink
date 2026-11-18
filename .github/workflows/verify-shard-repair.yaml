@@ -1,0 +1,41 @@
+name: Verify shard repair
+on:
+  push:
+    branches: [verify/shard-repair]
+    paths: [.github/workflows/verify-shard-repair.yaml]
+permissions:
+  contents: read
+jobs:
+  bazel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Free disk space for the local build
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet
+          df -h /
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86
+        with:
+          bazelisk-cache: false
+          repository-cache: false
+          disk-cache: false
+      - name: Verify project-pinned Bazel tests
+        run: |
+          bazel --version
+          bazel test \
+            //nativelink-store:integration_tests/shard_store_test_test \
+            //nativelink-store:integration_tests/verify_store_test_test \
+            //nativelink-store:integration_tests/fast_slow_store_test_test \
+            --config=nl-toolchain \
+            --config=nl-quiet \
+            --jobs=2 \
+            --verbose_failures \
+            --lockfile_mode=error \
+            --remote_cache= \
+            --remote_executor= \
+            --bes_backend= \
+            --test_arg=--test-threads=1 \
+            --test_output=all
